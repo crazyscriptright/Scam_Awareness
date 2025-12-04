@@ -44,7 +44,7 @@ function loadEnvironment() {
     jwtExpiry: process.env.JWT_EXPIRY || '24h',
     hasDatabaseUrl: !!process.env.DATABASE_URL,
     hasRecaptchaSecret: !!process.env.RECAPTCHA_SECRET_KEY,
-    hasNewsApiKey: !!process.env.REACT_APP_NEWS_API_KEY,
+    hasNewsApiKey: !!process.env.NEWS_API_KEY,
     allowedOrigins: process.env.ALLOWED_ORIGINS || 'Not set',
     nodeEnv: process.env.NODE_ENV || 'development'
   });
