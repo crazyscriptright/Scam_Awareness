@@ -44,13 +44,15 @@ const AllArticlesPage = () => {
   useEffect(() => {
     const fetchScamArticles = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_NEWS_API_URL}?q=${encodeURIComponent(
-            "scam awareness OR fraud prevention"
-          )}&pageSize=30&sortBy=publishedAt&language=en&apiKey=${
-            process.env.REACT_APP_NEWS_API_KEY
-          }`
-        );
+        // Call backend API instead of directly calling News API
+        const response = await axios.get('/api/news', {
+          params: {
+            q: 'scam awareness OR fraud prevention',
+            pageSize: 30,
+            sortBy: 'publishedAt',
+            language: 'en'
+          }
+        });
 
         // Filter for scam-specific content and add default image if missing
         const filteredArticles = response.data.articles

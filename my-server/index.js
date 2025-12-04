@@ -958,6 +958,64 @@ app.put("/external-report-update/:report_id", verifyToken, requireExternal, asyn
   }
 });
 
+// NEWS API PROXY - Fetch news articles from News API
+app.get("/api/news", async (req, res) => {
+  try {
+    const { q, pageSize = 20, language = 'en', sortBy = 'publishedAt' } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: "Query parameter 'q' is required" });
+    }
+
+    // Check if NEWS_API_KEY is configured
+    const newsApiKey = process.env.NEWS_API_KEY;
+    if (!newsApiKey) {
+      console.warn("NEWS_API_KEY not configured");
+      return res.status(200).json({ 
+        articles: [],
+        totalResults: 0,
+        message: "News service temporarily unavailable"
+      });
+    }
+
+    // Use native fetch or require https module
+    const https = require('https');
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&pageSize=${pageSize}&language=${language}&sortBy=${sortBy}&apiKey=${newsApiKey}`;
+    
+    // Make request to News API
+    const response = await new Promise((resolve, reject) => {
+      https.get(url, (apiRes) => {
+        let data = '';
+        apiRes.on('data', chunk => data += chunk);
+        apiRes.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(new Error('Invalid JSON response from News API'));
+          }
+        });
+      }).on('error', reject);
+    });
+
+    // Forward the response from News API
+    if (response.status === 'ok') {
+      res.json(response);
+    } else {
+      console.error("News API error:", response);
+      res.status(500).json({ 
+        error: "Failed to fetch news",
+        message: response.message || "Unknown error"
+      });
+    }
+  } catch (error) {
+    console.error("News API proxy error:", error);
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      message: "Failed to fetch news articles"
+    });
+  }
+});
+
 // LOGOUT
 // JWT is stateless, so logout is handled client-side by removing the token
 // This endpoint is optional and mainly for confirmation

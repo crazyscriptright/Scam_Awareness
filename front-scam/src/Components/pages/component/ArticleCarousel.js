@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Helmet } from "react-helmet";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from '../../../utils/axios';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -26,15 +27,17 @@ const ArticleCarousel = () => {
             "investment scam", "romance scam", "tech support scam"
         ].join(' OR ');
         
-        const response = await fetch(
-          `${process.env.REACT_APP_NEWS_API_URL}?q=${encodeURIComponent(scamTerms)}&pageSize=20&language=en&sortBy=publishedAt&apiKey=${process.env.REACT_APP_NEWS_API_KEY}`
-        );
+        // Call backend API instead of directly calling News API
+        const response = await axios.get('/api/news', {
+          params: {
+            q: scamTerms,
+            pageSize: 20,
+            language: 'en',
+            sortBy: 'publishedAt'
+          }
+        });
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch news');
-        }
-        
-        const data = await response.json();
+        const data = response.data;
         
         // Filter articles with images and required fields, and further filter for scam-related content
         const filteredArticles = data.articles
@@ -89,12 +92,17 @@ const ArticleCarousel = () => {
         
         // If we don't have enough scam-specific articles, supplement with general cybersecurity news
         if (filteredArticles.length < 10) {
-          const backupResponse = await fetch(
-            `${process.env.REACT_APP_NEWS_API_URL}?q=cybersecurity&pageSize=${10 - filteredArticles.length}&language=en&sortBy=publishedAt&apiKey=${process.env.REACT_APP_NEWS_API_KEY}`
-          );
+          const backupResponse = await axios.get('/api/news', {
+            params: {
+              q: 'cybersecurity',
+              pageSize: 10 - filteredArticles.length,
+              language: 'en',
+              sortBy: 'publishedAt'
+            }
+          });
           
-          if (backupResponse.ok) {
-            const backupData = await backupResponse.json();
+          if (backupResponse.data) {
+            const backupData = backupResponse.data;
             const backupArticles = backupData.articles
               .filter(article => article.urlToImage && article.title && article.description)
               .slice(0, 10 - filteredArticles.length)
