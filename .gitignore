@@ -6,3 +6,5 @@ volunabilities.txt
 requirements.txt
 scheduled_commit.bat
 .vscode/
+*/.env.prod
+*/.env

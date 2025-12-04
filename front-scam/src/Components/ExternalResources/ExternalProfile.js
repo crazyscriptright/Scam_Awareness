@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { FaUser, FaKey, FaSignOutAlt, FaCamera, FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import WithAuthEx from "../hooks/WithAuthEx";

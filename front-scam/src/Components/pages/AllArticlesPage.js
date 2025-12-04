@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { motion } from "framer-motion";
 import { FaArrowRight, FaCalendarAlt, FaSearch, FaShieldAlt } from "react-icons/fa";
 import { Helmet } from "react-helmet";

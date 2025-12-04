@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { Table, Input, Button, Modal, Spin, message as antdMessage } from "antd";
 import { FaSyncAlt, FaEye, FaPaperclip } from "react-icons/fa";
 import { motion } from "framer-motion";

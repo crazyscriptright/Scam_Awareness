@@ -1,6 +1,6 @@
 import WithAuth from "../hooks/WithAuth";
 import React, { useState } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { Form, Input, DatePicker, Button, message, Row, Col, Select } from "antd";
 import { motion } from "framer-motion"; // For animations
 import { 

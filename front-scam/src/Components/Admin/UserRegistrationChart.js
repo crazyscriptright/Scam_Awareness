@@ -1,7 +1,7 @@
 import WithAuth from "../hooks/WithAuth";
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { FaChartBar, FaChartLine, FaUsers } from "react-icons/fa";
 
 const UserRegistrationChart = ({ setTotalRegistrations }) => {

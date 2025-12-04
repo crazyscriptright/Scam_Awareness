@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "../../utils/axios";
 import { Link } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import Navbar from "./Navbar";

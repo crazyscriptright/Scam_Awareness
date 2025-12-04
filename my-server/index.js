@@ -1,4 +1,7 @@
-require("dotenv").config();
+// Load environment variables using custom loader
+const { loadEnvironment } = require("./envLoader");
+loadEnvironment();
+
 const express = require("express");
 const multer = require("multer");
 const { Pool } = require("pg");
@@ -6,11 +9,10 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const session = require("express-session");
 const compression = require("compression");
 const bcrypt = require("bcrypt");
 const asyncHandler = require("express-async-handler");
-const pgSession = require("connect-pg-simple")(session);
+const { generateToken, verifyToken, requireAdmin, requireExternal, requireAuth } = require("./middleware/auth");
 
 
 const app = express();
@@ -21,115 +23,47 @@ const failedAttempts = {}; // { email: { count: 0, lastAttempt: Date } }
 
 // PostgreSQL Connection (Port 5434)
 const pool = new Pool({
-  user: process.env.DB_USER ,
-  host: process.env.DB_HOST ,
-  database: process.env.DB_NAME ,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Force UTC timezone for all connections
+  options: '-c timezone=UTC',
 });
 
 // Middleware
-app.use(cors({ origin: ["http://localhost:3000","http://192.168.240.1:3000"], credentials: true }));
+app.use(cors({ 
+  origin: [
+    "http://localhost:3000",
+    "https://scam-awareness.vercel.app"
+  ], 
+  credentials: false // JWT doesn't need credentials
+}));
 app.use(bodyParser.json({ limit: "15mb" })); // Adjust if needed
 app.use(bodyParser.urlencoded({ limit: "15mb", extended: true }));
 app.use(helmet());
 app.use(compression());
 app.use(morgan("combined"));
 
-// Secure session management
-app.use(
-  session({
-    store: new pgSession({
-      pool: pool,
-      tableName: "session",
-    }),
-    secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production"? true : false,
-      httpOnly: true,
-      maxAge: 30 * 60 * 1000, // 30 minutes
-      sameSite: "strict",
-    },
-  })
-);
-
-
-
-// Auto logout after inactivity
-app.use((req, res, next) => {
-  if (req.session.user) {
-    req.session.touch();
-  }
-  next();
-});
-
 // Multer setup (file handling, restricting to images and PDFs)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 
-// Middleware to check authentication
-const isAuthenticated = (req, res, next) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized access" });
-  }
-  next();
-};
-
-const isAuthenticatedAdmin = (req, res, next) => {
-  // Check if user exists in session
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Unauthorized access" });
-  }
-
-  // Check userType (note the capital T to match your session structure)
-  if (req.session.user.userType !== 1) {
-    return res.status(403).json({
-      error: "Forbidden: Admin privileges required"
-    });
-  }
-
-  next();
-};
-
-const isAuthenticatedexternal = (req, res, next) => {
-    // Check if user exists in session
-    if (!req.session.user) {
-      return res.status(401).json({ error: "Unauthorized access" });
+// TOKEN VERIFICATION ENDPOINT (replaces /session)
+app.get("/api/verify-token", verifyToken, (req, res) => {
+  res.json({
+    valid: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      userType: req.user.userType,
+      name: req.user.name,
+      role: req.user.role
     }
-  
-    // Check userType (note the capital T to match your session structure)
-    if (req.session.user.userType !== 2) {
-      return res.status(403).json({
-        error: "Forbidden: ExternalUser privileges required"
-      });
-    }
-  
-    next();
-  };
-
-
-// CHECK SESSION
-app.get("/session", (req, res) => {
-  if (req.session.user) {
-    res.json({
-      loggedIn: true,
-      user: req.session.user,
-      userType: req.session.user.userType,
-    });
-  } else {
-    res.json({ loggedIn: false });
-  }
+  });
 });
 
-app.get("/api/userid_fetch", (req, res) => {
-  if (req.session.user) {
-    res.json({ user_id: req.session.user.id });
-  } else {
-    res.status(401).json({ error: "Unauthorized" });
-  }
+app.get("/api/userid_fetch", verifyToken, (req, res) => {
+  res.json({ user_id: req.user.id });
 });
 
 // REGISTER USER
@@ -153,7 +87,7 @@ app.post(
   })
 );
 
-// LOGIN USER
+// LOGIN USER (Updated for JWT)
 app.post(
   "/signin",
   asyncHandler(async (req, res) => {
@@ -203,28 +137,28 @@ app.post(
       // Successful login: reset failed attempts
       delete failedAttempts[email];
 
-      // Regenerate session for security
-      req.session.regenerate((err) => {
-        if (err) return res.status(500).json({ error: "Session error" });
+      // Generate JWT token
+      const token = generateToken(user);
 
-        req.session.user = {
+      const redirectUrl =
+        user.usertype === 1
+          ? "/Admin/AdminHome"
+          : user.usertype === 2
+          ? "/ExternalResources/ExternalResourcesHome"
+          : "/";
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        token: token,
+        user: {
           id: user.user_id,
           name: user.name,
-          userType: user.usertype,
-        };
-
-        const redirectUrl =
-          user.usertype === 1
-            ? "/Admin/AdminHome"
-            : user.usertype === 2
-            ? "/ExternalResources/ExternalResourcesHome"
-            : "/";
-
-        res.json({
-          message: "Login successful",
-          userName: user.name,
-          redirectUrl,
-        });
+          email: user.email,
+          userType: user.usertype
+        },
+        userName: user.name,
+        redirectUrl,
       });
     } catch (error) {
       console.error("Sign-in error:", error);
@@ -266,10 +200,10 @@ app.post(
 
 app.post(
   "/scam-reports",
-  isAuthenticated, // Ensure user is logged in
+  verifyToken, // JWT authentication
   asyncHandler(async (req, res) => {
     try {
-      const user_id = req.session.user.id;
+      const user_id = req.user.id;
       const { scam_type, description, scam_date, proof } = req.body;
 
       if (!user_id || !scam_type || !description || !scam_date || !proof) {
@@ -295,11 +229,11 @@ app.post(
 
 // ###########User########## 
 //  PROFILE User (GET & UPDATE)
-app.get("/profile", isAuthenticated, asyncHandler(async (req, res) => {
+app.get("/profile", verifyToken, asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT name, email, profile_picture FROM users WHERE user_id = $1 AND usertype = 0",
-      [req.session.user.id]
+      [req.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -316,14 +250,14 @@ app.get("/profile", isAuthenticated, asyncHandler(async (req, res) => {
 // Update Profile Picture
 app.post(
   "/update-profile-picture",
-  isAuthenticated,
+  verifyToken,
   upload.single("profilePicture"),
   asyncHandler(async (req, res) => {
     try {
       const profilePic = req.file ? req.file.buffer : null;
       await pool.query(
         "UPDATE users SET profile_picture = $1 WHERE user_id = $2",
-        [profilePic, req.session.user.id]
+        [profilePic, req.user.id]
       );
       res.json({ profilePic: `data:image/jpeg;base64,${profilePic.toString('base64')}` });
     } catch (error) {
@@ -337,14 +271,14 @@ app.post(
 // Update Password
 app.post(
   "/update-password",
-  isAuthenticated,
+  verifyToken,
   asyncHandler(async (req, res) => {
     try {
       const { newPassword } = req.body;
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
       await pool.query(
         "UPDATE users SET password = $1 WHERE user_id = $2",
-        [hashedPassword, req.session.user.id]
+        [hashedPassword, req.user.id]
       );
       res.json({ message: "Password updated successfully" });
     } catch (error) {
@@ -375,9 +309,9 @@ app.get(
   })
 );
 
-app.get("/api/reports", isAuthenticated, async (req, res) => {
+app.get("/api/reports", verifyToken, async (req, res) => {
   try {
-    const user_id = req.session.user.id; // Fetch user_id from session
+    const user_id = req.user.id; // Fetch user_id from JWT token
 
     const query = `
       SELECT 
@@ -400,9 +334,9 @@ app.get("/api/reports", isAuthenticated, async (req, res) => {
 });
 //#########Admin############
 // GET Profile Picture with Authentication
-app.get("/profile-picture", isAuthenticatedAdmin, async (req, res) => {
+app.get("/profile-picture", verifyToken, requireAdmin, async (req, res) => {
   try {
-    const userId = req.session.user.id; // Remove array brackets
+    const userId = req.user.id; // Remove array brackets
     const result = await pool.query(
       "SELECT profile_picture, name FROM users WHERE user_id = $1",
       [userId]
@@ -426,9 +360,9 @@ app.get("/profile-picture", isAuthenticatedAdmin, async (req, res) => {
 });
 
 // POST Profile Picture with Authentication
-app.post("/profile-picture", isAuthenticatedAdmin, async (req, res) => {
+app.post("/profile-picture", verifyToken, requireAdmin, async (req, res) => {
   try {
-    const userId = req.session.user.id; // Remove array brackets
+    const userId = req.user.id; // Remove array brackets
     const { profile_picture } = req.body;
 
     if (!profile_picture) {
@@ -453,7 +387,7 @@ app.post("/profile-picture", isAuthenticatedAdmin, async (req, res) => {
 
 // USER REGISTRATION
 // Endpoint to get total user registrations
-app.get("/api/users/total-registrations-count", async (req, res) => {
+app.get("/api/users/total-registrations-count", verifyToken, requireAdmin, async (req, res) => {
   try {
     // Query the database to count total users
     const result = await pool.query("SELECT COUNT(*) AS total FROM users");
@@ -470,7 +404,7 @@ app.get("/api/users/total-registrations-count", async (req, res) => {
 });
 
 // ACTIVE SESSIONS
-app.get("/api/users/active-sessions", async (req, res) => {
+app.get("/api/users/active-sessions", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT COUNT(*) AS "activeSessions" FROM session WHERE expire > NOW()'
@@ -487,7 +421,7 @@ app.get("/api/users/active-sessions", async (req, res) => {
 
 
 // SECURITY ALERTS
-app.get("/api/User/security-alerts", (req, res) => {
+app.get("/api/User/security-alerts", verifyToken, requireAdmin, (req, res) => {
   const alerts = Object.keys(failedAttempts)
     .filter((email) => failedAttempts[email].count >= 3) // Show only blocked users
     .map((email) => ({
@@ -500,7 +434,7 @@ app.get("/api/User/security-alerts", (req, res) => {
 
 //charts used
 // USER REGISTRATION STATS
-app.get("/api/users/registration-stats", async (req, res) => {
+app.get("/api/users/registration-stats", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT DATE(created_at) AS date, COUNT(*) AS count 
@@ -516,7 +450,7 @@ app.get("/api/users/registration-stats", async (req, res) => {
 });
 
 // SCAM REPORTS STATS
-app.get("/api/users/scam-reports", async (req, res) => {
+app.get("/api/users/scam-reports", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT scam_type, report_status 
@@ -534,7 +468,7 @@ app.get("/api/users/scam-reports", async (req, res) => {
 
 //###########Table############
 // Fetch proof for a specific report
-app.get("/api/scam-reports/:report_id/proof", async (req, res) => {
+app.get("/api/scam-reports/:report_id/proof", verifyToken, async (req, res) => {
   const { report_id } = req.params;
   try {
     const result = await pool.query(
@@ -556,7 +490,7 @@ app.get("/api/scam-reports/:report_id/proof", async (req, res) => {
 });
 
 // Get all scam reports from the "submitted_scam_reports" view
-app.get("/api/scam-reports", async (req, res) => {
+app.get("/api/scam-reports", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM submitted_scam_reports");
     res.json(result.rows);
@@ -567,7 +501,7 @@ app.get("/api/scam-reports", async (req, res) => {
 });
 
 // Update scam report status
-app.put("/admin-approval/:report_id", async (req, res) => {
+app.put("/admin-approval/:report_id", verifyToken, requireAdmin, async (req, res) => {
   const { report_id } = req.params;
   const { report_status, admin_comments } = req.body;
 
@@ -594,7 +528,7 @@ app.put("/admin-approval/:report_id", async (req, res) => {
 
 
 // API to create a new entry in external_resources table
-app.post("/external-resources-status-update", async (req, res) => {
+app.post("/external-resources-status-update", verifyToken, requireAdmin, async (req, res) => {
   const { verification_id, report_status } = req.body;
 
   try {
@@ -616,7 +550,7 @@ app.post("/external-resources-status-update", async (req, res) => {
 
 //#########Fetch all scam reports##########
 // Fetch all scam reports
-app.get("/api/all-scam-reports", async (req, res) => {
+app.get("/api/all-scam-reports", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -640,7 +574,7 @@ app.get("/api/all-scam-reports", async (req, res) => {
 
 //##############Creating External Users##############
 //createing external users
-app.post("/api/create_external_user", async (req, res) => {
+app.post("/api/create_external_user", verifyToken, requireAdmin, async (req, res) => {
   const { name, dob, email, password } = req.body;
 
   try {
@@ -665,7 +599,7 @@ app.post("/api/create_external_user", async (req, res) => {
 
 //###########Contact##########
 // Fetch all contact details
-app.get("/api/contacts", async (req, res) => {
+app.get("/api/contacts", verifyToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -687,7 +621,7 @@ app.get("/api/contacts", async (req, res) => {
 
 //###########User staus block ##########
 // Update user status by email or ID
-app.put("/api/users/status", async (req, res) => {
+app.put("/api/users/status", verifyToken, requireAdmin, async (req, res) => {
   const { identifier, status } = req.body;
 
   try {
@@ -717,15 +651,15 @@ app.put("/api/users/status", async (req, res) => {
 //###########Normal user###############
 // Contact Us or Feedback
 // Contact Us endpoint
-app.post("/api/contact", (req, res) => {
+app.post("/api/contact", verifyToken, (req, res) => {
   const { message, attachment } = req.body;
 
   // Check if user is logged in
-  if (!req.session.user.id) {
+  if (!req.user || !req.user.id) {
     return res.status(401).json({ error: "Unauthorized: Please log in" });
   }
 
-  const userId = req.session.user.id; // Get user_id from session
+  const userId = req.user.id; // Get user_id from JWT token
 
   // Insert into database
   pool.query(
@@ -741,7 +675,7 @@ app.post("/api/contact", (req, res) => {
   );
 });
 
-app.get("/api/contacts/:contact_id/attachment", async (req, res) => {
+app.get("/api/contacts/:contact_id/attachment", verifyToken, async (req, res) => {
   const { contact_id } = req.params;
 
   try {
@@ -766,11 +700,11 @@ app.get("/api/contacts/:contact_id/attachment", async (req, res) => {
 
 app.post(
   "/contact",
-  isAuthenticated,
+  verifyToken,
   asyncHandler(async (req, res) => {
     try {
       const { message, attachment } = req.body;
-      const user_id = req.session.user.id;
+      const user_id = req.user.id;
 
       if (!message) {
         return res.status(400).json({ error: "Message field is required" });
@@ -791,7 +725,7 @@ app.post(
     }
   })
 );
-app.get("/api/contacts", async (req, res) => {
+app.get("/api/contacts", verifyToken, requireAdmin, async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query; // Defaults to fetching 10 records
     const result = await pool.query(
@@ -805,7 +739,7 @@ app.get("/api/contacts", async (req, res) => {
   }
 });
 
-app.get("/download/:contact_id", async (req, res) => {
+app.get("/download/:contact_id", verifyToken, async (req, res) => {
   const { contact_id } = req.params;
 
   try {
@@ -834,9 +768,9 @@ app.get("/download/:contact_id", async (req, res) => {
 
 // ###########External resource#############
 // External profile picture
-app.get("/external-profile-picture",isAuthenticatedexternal, async (req, res) => {
+app.get("/external-profile-picture", verifyToken, requireExternal, async (req, res) => {
   try {
-    const userId = req.session.user.id; // Remove array brackets
+    const userId = req.user.id;
     const result = await pool.query(
       "SELECT profile_picture, name FROM users WHERE user_id = $1",
       [userId]
@@ -860,9 +794,9 @@ app.get("/external-profile-picture",isAuthenticatedexternal, async (req, res) =>
 });
 
 // POST Profile Picture with Authentication
-app.post("/external-profile-picture", isAuthenticatedexternal, async (req, res) => {
+app.post("/external-profile-picture", verifyToken, requireExternal, async (req, res) => {
   try {
-    const userId = req.session.user.id; // Remove array brackets
+    const userId = req.user.id;
     const { profile_picture } = req.body;
 
     if (!profile_picture) {
@@ -883,7 +817,7 @@ app.post("/external-profile-picture", isAuthenticatedexternal, async (req, res) 
 });
 
 //modifed all scam reports
-app.get("/api/all-scam-reports-modified", async (req, res) => {
+app.get("/api/all-scam-reports-modified", verifyToken, requireExternal, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -907,7 +841,7 @@ app.get("/api/all-scam-reports-modified", async (req, res) => {
 
 //external status update
 // Get all scam reports from the "submitted_scam_reports not cancelled or Resolved or " view
-app.get("/api/scam-reports-modified", async (req, res) => {
+app.get("/api/scam-reports-modified", verifyToken, requireExternal, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -935,7 +869,7 @@ app.get("/api/scam-reports-modified", async (req, res) => {
 });
 
 // Update scam report status
-app.put("/external-report-update/:report_id", async (req, res) => {
+app.put("/external-report-update/:report_id", verifyToken, requireExternal, async (req, res) => {
   const { report_id } = req.params;
   const { report_status, admin_comments } = req.body;
 
@@ -961,13 +895,12 @@ app.put("/external-report-update/:report_id", async (req, res) => {
 });
 
 // LOGOUT
+// JWT is stateless, so logout is handled client-side by removing the token
+// This endpoint is optional and mainly for confirmation
 app.post("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: "Logout failed" });
-    }
-    res.clearCookie("connect.sid", { path: "/" });
-    res.status(200).json({ message: "Logged out successfully" });
+  res.status(200).json({ 
+    success: true, 
+    message: "Logged out successfully. Please remove the token from client storage." 
   });
 });
 

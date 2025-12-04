@@ -2,7 +2,7 @@
 // #####################3
 
 import React, { useState } from "react";
-import axios from "axios";
+import axios from "../../../utils/axios";
 
 const AdminProfileup = () => {
   const [file, setFile] = useState(null);

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { FaEnvelope, FaCalendarAlt, FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const ForgotPassword = () => {

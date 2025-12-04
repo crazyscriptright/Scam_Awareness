@@ -1,0 +1,30 @@
+{
+  "name": "scam-awareness",
+  "version": "1.0.0",
+  "description": "Scam Awareness Portal - Production Ready with JWT Authentication",
+  "private": true,
+  "scripts": {
+    "install:frontend": "cd front-scam && npm install",
+    "install:backend": "cd my-server && npm install",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "build:frontend": "cd front-scam && npm run build",
+    "dev:frontend": "cd front-scam && npm start",
+    "dev:backend": "cd my-server && node index.js",
+    "deploy:frontend": "cd front-scam && vercel --prod",
+    "deploy:backend": "cd my-server && git push heroku main",
+    "test": "cd front-scam && npm run test"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "scam",
+    "fraud prevention",
+    "awareness",
+    "jwt",
+    "authentication"
+  ],
+  "author": "Scam Awareness Project",
+  "license": "MIT"
+}

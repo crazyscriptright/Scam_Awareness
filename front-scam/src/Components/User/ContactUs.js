@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import Modal from "./Modal";
 import { useNavigate } from "react-router-dom";
 import { FiMail, FiPaperclip, FiAlertCircle } from "react-icons/fi";

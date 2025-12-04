@@ -10,7 +10,7 @@ import {
   FaClipboardList,
   FaSignOutAlt,
 } from "react-icons/fa";
-import axios from "axios";
+import axios from "../../utils/axios";
 import "tailwindcss/tailwind.css";
 
 const ExternalNavbar = () => {

@@ -1,6 +1,6 @@
 import WithAuth from "../hooks/WithAuth";
 import React, { useState, useEffect, useMemo } from "react"; // Added useMemo
-import axios from "axios";
+import axios from "../../utils/axios";
 import { motion } from "framer-motion";
 import { Table, Input, Select, Button, message, Spin, Progress, Modal, DatePicker } from "antd";
 import { FaSort, FaFilter, FaSyncAlt, FaEye } from "react-icons/fa";

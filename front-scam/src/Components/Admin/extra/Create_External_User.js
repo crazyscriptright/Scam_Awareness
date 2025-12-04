@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axios from "../../../utils/axios";
 import { Form, Input, DatePicker, Button, message } from "antd";
 import { motion } from "framer-motion"; // For animations
 import { UserAddOutlined } from "@ant-design/icons"; // For icons

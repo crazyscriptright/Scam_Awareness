@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import axios from "../../utils/axios";
 import { Table, Input, Select, Button, Spin, DatePicker, message, Modal } from "antd";
 import { FaSyncAlt } from "react-icons/fa";
 import dayjs from "dayjs";

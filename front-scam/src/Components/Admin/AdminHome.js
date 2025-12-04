@@ -6,7 +6,7 @@ import WithAuth from "../hooks/WithAuth";
 import UserRegistrationChart from "./UserRegistrationChart";
 import { motion } from "framer-motion";
 import ScamReportsChart from "./ScamReportsChart";
-import axios from "axios";
+import axios from "../../utils/axios";
 import ScamReportsTable from "./ScamReportsTable";
 import AllScamReportsTable from "./AllScamReportsTable";
 import UserManagement from "./UserManagement";

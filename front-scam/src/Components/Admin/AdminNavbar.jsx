@@ -9,7 +9,7 @@ import {
   FaClipboardList,
   FaSignOutAlt,
 } from "react-icons/fa";
-import axios from "axios";
+import axios from "../../utils/axios";
 import WithAuth from "../hooks/WithAuth"; // Corrected import path
 import "tailwindcss/tailwind.css";
 

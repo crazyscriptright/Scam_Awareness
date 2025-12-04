@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../../utils/axios";
+import { isAuthenticated, clearAuth } from "../../utils/auth";
+import Loading from "../Loading";
 
 const WithAuthEx = (WrappedComponent) => {
   const AuthComponent = (props) => {
@@ -8,25 +10,38 @@ const WithAuthEx = (WrappedComponent) => {
     const navigate = useNavigate();
 
     useEffect(() => {
-      axios.get("/session", { withCredentials: true })
-        .then((res) => {
-          // Check for both login status and admin privileges
-          if (res.data.loggedIn && res.data.user?.userType === 2) {
+      const verifyAuth = async () => {
+        // First check if token exists and is valid (client-side)
+        if (!isAuthenticated()) {
+          setAuthStatus("denied");
+          navigate("/login");
+          return;
+        }
+
+        // Verify with backend that token is valid and user is external resource
+        try {
+          const response = await axios.get("/api/verify-token");
+          
+          if (response.data.valid && response.data.user?.userType === 2) {
             setAuthStatus("authenticated");
           } else {
+            clearAuth();
             setAuthStatus("denied");
             navigate("/login");
           }
-        })
-        .catch((err) => {
-          console.error("Session check error", err);
+        } catch (err) {
+          console.error("Token verification error", err);
+          clearAuth();
           setAuthStatus("denied");
           navigate("/login");
-        });
+        }
+      };
+
+      verifyAuth();
     }, [navigate]);
 
     if (authStatus === "checking") {
-      return <div>Loading...</div>;
+      return <Loading />;
     }
 
     if (authStatus === "denied") {
