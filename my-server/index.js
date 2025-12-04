@@ -292,24 +292,48 @@ app.post(
 
 
 // ###########User########## 
-//  PROFILE User (GET & UPDATE)
-app.get("/profile", verifyToken, asyncHandler(async (req, res) => {
+//  PROFILE User (GET & UPDATE) - No redirect on missing auth
+app.get("/profile", async (req, res) => {
   try {
+    // Check for authorization header
+    const authHeader = req.headers.authorization;
+    
+    // If no token, return not authenticated (don't throw 401)
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(200).json({ authenticated: false, user: null });
+    }
+
+    // Extract and verify token
+    const token = authHeader.split(' ')[1];
+    const jwt = require('jsonwebtoken');
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      // Invalid token, return not authenticated
+      return res.status(200).json({ authenticated: false, user: null });
+    }
+
+    // Fetch user profile
     const result = await pool.query(
       "SELECT name, email, profile_picture FROM users WHERE user_id = $1 AND usertype = 0",
-      [req.user.id]
+      [decoded.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(200).json({ authenticated: false, user: null });
     }
 
-    res.json(result.rows[0]);
+    res.json({ 
+      authenticated: true, 
+      user: result.rows[0] 
+    });
   } catch (error) {
     console.error("User profile error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-}));
+});
 
 // Update Profile Picture
 app.post(
@@ -972,19 +996,35 @@ app.get("/api/news", async (req, res) => {
     if (!newsApiKey) {
       console.warn("NEWS_API_KEY not configured");
       return res.status(200).json({ 
+        status: 'ok',
         articles: [],
         totalResults: 0,
         message: "News service temporarily unavailable"
       });
     }
 
-    // Use native fetch or require https module
+    // Use native https module with proper headers
     const https = require('https');
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&pageSize=${pageSize}&language=${language}&sortBy=${sortBy}&apiKey=${newsApiKey}`;
+    const url = new URL(`https://newsapi.org/v2/everything`);
+    url.searchParams.append('q', q);
+    url.searchParams.append('pageSize', pageSize);
+    url.searchParams.append('language', language);
+    url.searchParams.append('sortBy', sortBy);
+    url.searchParams.append('apiKey', newsApiKey);
     
-    // Make request to News API
+    // Make request to News API with User-Agent header
+    const options = {
+      hostname: 'newsapi.org',
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'ScamAwareness/1.0 (https://scam-awareness.vercel.app)',
+        'Accept': 'application/json'
+      }
+    };
+
     const response = await new Promise((resolve, reject) => {
-      https.get(url, (apiRes) => {
+      const apiReq = https.request(options, (apiRes) => {
         let data = '';
         apiRes.on('data', chunk => data += chunk);
         apiRes.on('end', () => {
@@ -994,7 +1034,10 @@ app.get("/api/news", async (req, res) => {
             reject(new Error('Invalid JSON response from News API'));
           }
         });
-      }).on('error', reject);
+      });
+      
+      apiReq.on('error', reject);
+      apiReq.end();
     });
 
     // Forward the response from News API
@@ -1002,16 +1045,22 @@ app.get("/api/news", async (req, res) => {
       res.json(response);
     } else {
       console.error("News API error:", response);
-      res.status(500).json({ 
-        error: "Failed to fetch news",
-        message: response.message || "Unknown error"
+      // Return empty articles array instead of error to allow fallback on frontend
+      res.status(200).json({ 
+        status: 'ok',
+        articles: [],
+        totalResults: 0,
+        message: response.message || "News service temporarily unavailable"
       });
     }
   } catch (error) {
     console.error("News API proxy error:", error);
-    res.status(500).json({ 
-      error: "Internal Server Error",
-      message: "Failed to fetch news articles"
+    // Return empty articles array instead of error to allow fallback on frontend
+    res.status(200).json({ 
+      status: 'ok',
+      articles: [],
+      totalResults: 0,
+      message: "News service temporarily unavailable"
     });
   }
 });

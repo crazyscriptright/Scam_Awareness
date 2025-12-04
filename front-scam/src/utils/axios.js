@@ -28,14 +28,17 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Don't redirect on /profile endpoint - it handles auth gracefully
+    const isProfileEndpoint = error.config?.url?.includes('/profile');
+    
     // Handle 401 Unauthorized - token expired or invalid
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isProfileEndpoint) {
       clearAuth();
       window.location.href = '/login';
     }
     
     // Handle 403 Forbidden - insufficient permissions
-    if (error.response?.status === 403) {
+    if (error.response?.status === 403 && !isProfileEndpoint) {
       window.location.href = '/';
     }
     

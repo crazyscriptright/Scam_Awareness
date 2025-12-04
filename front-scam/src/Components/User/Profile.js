@@ -31,22 +31,36 @@ const Profile = () => {
   // Fetch User Profile
   useEffect(() => {
     axios
-      .get("/profile", { withCredentials: true })
+      .get("/profile")
       .then((res) => {
-        if (res.data) {
+        // Handle new response format with authenticated flag
+        if (res.data && res.data.authenticated && res.data.user) {
           setUser({
-            name: res.data.name || "User",
-            profilePic: res.data.profilePic || "",
+            name: res.data.user.name || "User",
+            profilePic: res.data.user.profile_picture || "",
           });
+        } else {
+          // Not authenticated, user remains null (show signin button)
+          setUser(null);
         }
       })
-      .catch((err) => console.error("Profile fetch error", err));
+      .catch((err) => {
+        console.error("Profile fetch error", err);
+        setUser(null); // On error, treat as not authenticated
+      });
   }, []);
 
   // Handle Logout
   const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('scam_awareness_token');
+    localStorage.removeItem('scam_awareness_user');
+    
+    // Dispatch auth change event
+    window.dispatchEvent(new Event('authChange'));
+    
     axios
-      .post("/logout", {}, { withCredentials: true })
+      .post("/logout")
       .then(() => {
         setUser(null); // Clear user state
         setLogoutMessage("You are being logged out...");
@@ -56,7 +70,16 @@ const Profile = () => {
           navigate("/"); // Redirect to home page
         }, 2000); // Reduced to 2 seconds for a smoother experience
       })
-      .catch((err) => console.error("Logout error", err));
+      .catch((err) => {
+        console.error("Logout error", err);
+        // Even if API call fails, still logout locally
+        setUser(null);
+        setLogoutMessage("You are being logged out...");
+        setTimeout(() => {
+          setLogoutMessage(null);
+          navigate("/");
+        }, 2000);
+      });
   };
 
   // Handle Password Update
@@ -69,8 +92,7 @@ const Profile = () => {
     axios
       .post(
         "/update-password",
-        { newPassword },
-        { withCredentials: true }
+        { newPassword }
       )
       .then(() => {
         alert("Password updated successfully!");
@@ -91,7 +113,6 @@ const Profile = () => {
 
     axios
       .post("/update-profile-picture", formData, {
-        withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       })
       .then((res) => {

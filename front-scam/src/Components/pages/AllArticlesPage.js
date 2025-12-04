@@ -11,10 +11,141 @@ import Footer from "../User/Footer";
 // Default scam awareness image
 const DEFAULT_SCAM_IMAGE = "https://images.unsplash.com/photo-1563986768609-322da13575f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80";
 
+// Fallback embedded articles for when API fails
+const FALLBACK_ARTICLES = [
+  {
+    title: "Understanding Phishing Attacks and How to Avoid Them",
+    description: "Phishing attacks are one of the most common forms of cybercrime. Learn how to recognize suspicious emails, links, and messages that try to steal your personal information.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Investment Scam Warning: Too Good to Be True",
+    description: "Learn to identify fraudulent investment schemes promising unrealistic returns. Protect your savings from scammers offering guaranteed high profits with zero risk.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Romance Scams: Protecting Your Heart and Wallet",
+    description: "Online dating scams are on the rise. Discover the red flags of romance scams and how to protect yourself from emotional and financial exploitation.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Tech Support Scams: Don't Give Remote Access",
+    description: "Fake tech support calls and pop-ups are designed to trick you into giving scammers access to your computer. Learn how to identify and avoid these scams.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Identity Theft Prevention: Secure Your Personal Data",
+    description: "Your personal information is valuable. Follow these essential steps to protect your identity from thieves and minimize the risk of identity theft.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Cryptocurrency Scams: Stay Safe in the Digital Currency World",
+    description: "The cryptocurrency boom has attracted scammers. Learn about common crypto scams including fake exchanges, pump-and-dump schemes, and fraudulent ICOs.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Social Engineering: The Psychology Behind Scams",
+    description: "Scammers use psychological manipulation to trick victims. Understand the tactics of social engineering and how to recognize when you're being manipulated.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Online Shopping Safety: Spot Fake Websites",
+    description: "Learn how to identify fraudulent online stores and protect your credit card information when shopping online. Know the signs of legitimate e-commerce sites.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Email Security: Protecting Your Inbox from Scammers",
+    description: "Your email is a gateway to your personal information. Learn best practices for email security and how to identify suspicious messages before clicking.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Charity Scams: Verify Before You Donate",
+    description: "Fake charities exploit people's generosity. Learn how to verify legitimate charities and avoid donation scams, especially after natural disasters.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Work-From-Home Scams: Job Offer Red Flags",
+    description: "Remote work opportunities have increased, but so have job scams. Learn to identify fake job postings and employment fraud schemes.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1556761175-4b46a572b786?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Banking Security: Protect Your Financial Accounts",
+    description: "Secure your bank accounts from unauthorized access. Learn about multi-factor authentication, secure passwords, and monitoring your accounts for suspicious activity.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Mobile Phone Scams: Text and Call Fraud Prevention",
+    description: "Scammers use SMS and phone calls to deceive victims. Learn about smishing, vishing, and other mobile-based scams and how to protect yourself.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Ransomware Protection: Safeguard Your Data",
+    description: "Ransomware attacks can lock you out of your own files. Learn how to prevent ransomware infections and what to do if you become a victim.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Lottery and Prize Scams: If It Sounds Too Good...",
+    description: "You didn't win a lottery you never entered. Learn how prize scams work and why asking for fees to claim winnings is always a red flag.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Senior Citizens and Scams: Protecting Elderly Loved Ones",
+    description: "Seniors are often targeted by scammers. Learn about common scams targeting older adults and how to help protect your elderly family members.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Password Security: Creating Unbreakable Credentials",
+    description: "Weak passwords are an open door for hackers. Learn how to create strong, unique passwords and use password managers effectively.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  },
+  {
+    title: "Tax Season Scams: IRS Impersonation Fraud",
+    description: "Scammers impersonate the IRS to steal money and personal information. Learn how to identify fake tax-related communications and protect yourself.",
+    url: "#",
+    urlToImage: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    publishedAt: new Date().toISOString()
+  }
+];
+
 const AllArticlesPage = () => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const articlesPerPage = 6; // Reduced for better mobile view
@@ -54,6 +185,15 @@ const AllArticlesPage = () => {
           }
         });
 
+        // Check if API returned empty results (fallback scenario)
+        if (!response.data.articles || response.data.articles.length === 0) {
+          console.log("API returned no articles, using fallback");
+          setArticles(FALLBACK_ARTICLES);
+          setUsingFallback(true);
+          setLoading(false);
+          return;
+        }
+
         // Filter for scam-specific content and add default image if missing
         const filteredArticles = response.data.articles
           .filter(article => 
@@ -69,8 +209,11 @@ const AllArticlesPage = () => {
 
         setArticles(filteredArticles);
       } catch (err) {
-        console.error("Error fetching scam news:", err);
-        setError("Failed to load scam awareness articles. Please try again later.");
+        console.error("Error fetching scam news, using fallback articles:", err);
+        // Use fallback articles when API fails
+        setArticles(FALLBACK_ARTICLES);
+        setUsingFallback(true);
+        setError(null); // Clear error since we have fallback content
       } finally {
         setLoading(false);
       }
@@ -117,16 +260,43 @@ const AllArticlesPage = () => {
         <title>Scam Awareness News | Protect Yourself From Fraud</title>
       </Helmet>
 
-      <div className="max-w-7xl mx-auto">
-        {/* Header and Search (unchanged) */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          {usingFallback && (
+            <motion.div 
+              className="mb-4 inline-block px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+            </motion.div>
+          )}
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Scam Awareness Articles</h1>
+          <p className="text-lg text-gray-600">Stay informed and protect yourself from fraud</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-8 max-w-xl mx-auto">
+          <div className="relative">
+            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search articles..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
+              }}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
 
         {/* Articles Grid */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        ) : error ? (
-          <div className="text-center py-12 text-red-500">{error}</div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

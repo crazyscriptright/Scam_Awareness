@@ -11,10 +11,115 @@ import axios from '../../../utils/axios';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
+// Fallback embedded articles for when API fails
+const FALLBACK_ARTICLES = [
+  {
+    id: 1,
+    title: "Protect Yourself from Online Phishing Scams",
+    category: "PHISHING",
+    excerpt: "Learn how to identify and avoid phishing emails that attempt to steal your personal information and passwords.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "5 min read",
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 2,
+    title: "Investment Scams: Red Flags to Watch For",
+    category: "INVESTMENT SCAM",
+    excerpt: "Discover the warning signs of investment fraud and how to protect your hard-earned money from scammers.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "6 min read",
+    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 3,
+    title: "Romance Scams: How to Stay Safe Online",
+    category: "ROMANCE SCAM",
+    excerpt: "Understand the tactics romance scammers use and how to protect your heart and wallet when dating online.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "7 min read",
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 4,
+    title: "Tech Support Scams: Don't Fall for Fake Help",
+    category: "TECH SUPPORT SCAM",
+    excerpt: "Learn how to recognize fake tech support calls and pop-ups that try to gain access to your computer.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "4 min read",
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 5,
+    title: "Identity Theft Prevention: Best Practices",
+    category: "IDENTITY THEFT",
+    excerpt: "Essential tips to safeguard your personal information and prevent identity theft in the digital age.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "8 min read",
+    image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 6,
+    title: "Cryptocurrency Scams: Stay Vigilant",
+    category: "FINANCIAL FRAUD",
+    excerpt: "Explore common cryptocurrency scams and learn how to protect your digital assets from fraudsters.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "6 min read",
+    image: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 7,
+    title: "Social Engineering Attacks: Know the Tactics",
+    category: "SOCIAL ENGINEERING",
+    excerpt: "Understand how scammers manipulate people into revealing confidential information through psychological tricks.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "5 min read",
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 8,
+    title: "Online Shopping Scams: Shop Safely",
+    category: "FRAUD",
+    excerpt: "Tips for identifying fake online stores and protecting yourself from e-commerce fraud.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "4 min read",
+    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 9,
+    title: "COVID-19 Related Scams: Stay Protected",
+    category: "CYBER SECURITY",
+    excerpt: "Learn about pandemic-related scams and how to avoid falling victim to COVID-19 fraud schemes.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "5 min read",
+    image: "https://images.unsplash.com/photo-1584483766114-2cea6facdf57?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  },
+  {
+    id: 10,
+    title: "Report a Scam: Your Voice Matters",
+    category: "CYBER SECURITY",
+    excerpt: "Find out how to report scams to authorities and help protect others from falling victim to fraud.",
+    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+    readTime: "3 min read",
+    image: "https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    link: "#"
+  }
+];
+
 const ArticleCarousel = () => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [usingFallback, setUsingFallback] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +143,15 @@ const ArticleCarousel = () => {
         });
         
         const data = response.data;
+        
+        // Check if API returned empty results (fallback scenario)
+        if (!data.articles || data.articles.length === 0) {
+          console.log("API returned no articles, using fallback");
+          setArticles(FALLBACK_ARTICLES);
+          setUsingFallback(true);
+          setLoading(false);
+          return;
+        }
         
         // Filter articles with images and required fields, and further filter for scam-related content
         const filteredArticles = data.articles
@@ -129,8 +243,11 @@ const ArticleCarousel = () => {
           setArticles(filteredArticles);
         }
       } catch (err) {
-        setError(err.message);
-        console.error("Error fetching news:", err);
+        console.error("Error fetching news, using fallback articles:", err);
+        // Use fallback articles when API fails
+        setArticles(FALLBACK_ARTICLES);
+        setUsingFallback(true);
+        setError(null); // Clear error since we have fallback content
       } finally {
         setLoading(false);
       }
@@ -164,23 +281,6 @@ const ArticleCarousel = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="py-20 bg-white text-center">
-        <p className="text-red-500">Error: {error}</p>
-        <p className="text-gray-600 mt-2">Failed to load scam awareness articles.</p>
-      </div>
-    );
-  }
-
-  if (articles.length === 0) {
-    return (
-      <div className="py-20 bg-white text-center">
-        <p className="text-gray-600">No scam awareness articles available at the moment.</p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <Helmet>
@@ -203,6 +303,14 @@ const ArticleCarousel = () => {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
+            {usingFallback && (
+              <motion.div 
+                className="mb-4 inline-block px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+              </motion.div>
+            )}
             <motion.span 
               className="inline-block text-sm font-medium text-blue-500 tracking-widest mb-2 px-4 py-1 bg-blue-50 rounded-full"
               initial={{ opacity: 0, y: 10 }}

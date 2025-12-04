@@ -44,6 +44,13 @@ const Login = () => {
         headers: { "Content-Type": "application/json" },
       });
   
+      // Save token and user data to localStorage
+      localStorage.setItem('scam_awareness_token', res.data.token);
+      localStorage.setItem('scam_awareness_user', JSON.stringify(res.data.user));
+      
+      // Dispatch auth change event
+      window.dispatchEvent(new Event('authChange'));
+      
       // Handle successful login
       setMessage(`Welcome, ${res.data.userName}!`);
       setIsError(false);
