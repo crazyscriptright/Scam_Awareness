@@ -12,15 +12,7 @@ const ReportHistory = () => {
       try {
         setLoading(true);
 
-        // Fetch user_id from session
-        const sessionResponse = await axios.get("/session");
-        if (!sessionResponse.data.loggedIn) {
-          throw new Error("User is not logged in.");
-        }
-
-        const userId = sessionResponse.data.user.id;
-
-        // Fetch reports for the logged-in user
+        // Fetch reports for the logged-in user (JWT automatically included)
         const response = await axios.get("/api/reports");
         setReports(response.data);
       } catch (err) {

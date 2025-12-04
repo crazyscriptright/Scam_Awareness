@@ -19,14 +19,18 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
-      .get("/session", { withCredentials: true })
-      .then((res) => {
-        if (res.data.loggedIn) {
-          navigate(res.data.redirectUrl);
-        }
-      })
-      .catch((err) => console.error("Session check error", err));
+    // Check if user is already logged in via JWT token
+    const token = localStorage.getItem('scam_awareness_token');
+    const user = JSON.parse(localStorage.getItem('scam_awareness_user') || '{}');
+    
+    if (token && user.userType !== undefined) {
+      const redirectUrl = user.userType === 1 
+        ? "/Admin/AdminHome" 
+        : user.userType === 2 
+        ? "/ExternalResources/ExternalResourcesHome" 
+        : "/";
+      navigate(redirectUrl);
+    }
   }, [navigate]);
 
   const handleChange = (e) => {
@@ -38,7 +42,6 @@ const Login = () => {
     try {
       const res = await axios.post("/signin", formData, {
         headers: { "Content-Type": "application/json" },
-        withCredentials: true,
       });
   
       // Handle successful login

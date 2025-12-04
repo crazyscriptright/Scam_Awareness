@@ -30,22 +30,68 @@ const pool = new Pool({
 });
 
 // Middleware
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ["http://localhost:3000", "https://scam-awareness.vercel.app"];
+
 app.use(cors({ 
-  origin: [
-    "http://localhost:3000",
-    "https://scam-awareness.vercel.app"
-  ], 
-  credentials: false // JWT doesn't need credentials
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  maxAge: 86400 // Cache preflight request for 24 hours
 }));
 app.use(bodyParser.json({ limit: "15mb" })); // Adjust if needed
 app.use(bodyParser.urlencoded({ limit: "15mb", extended: true }));
-app.use(helmet());
+
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable for API server
+}));
+
 app.use(compression());
 app.use(morgan("combined"));
+
+// Handle OPTIONS requests for CORS preflight
+app.options('*', cors());
 
 // Multer setup (file handling, restricting to images and PDFs)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    message: "Scam Awareness API is running",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API root endpoint
+app.get("/api", (req, res) => {
+  res.json({ 
+    message: "Scam Awareness API v1.0",
+    endpoints: {
+      auth: ["/signin", "/register", "/forgot-password", "/api/verify-token"],
+      user: ["/profile", "/scam-reports", "/api/contact"],
+      admin: ["/api/users/*", "/api/scam-reports", "/admin-approval/:id"],
+      external: ["/external-profile-picture", "/api/scam-reports-modified"]
+    }
+  });
+});
 
 
 // TOKEN VERIFICATION ENDPOINT (replaces /session)
@@ -59,6 +105,24 @@ app.get("/api/verify-token", verifyToken, (req, res) => {
       name: req.user.name,
       role: req.user.role
     }
+  });
+});
+
+// Legacy /session endpoint for backward compatibility
+app.get("/session", verifyToken, (req, res) => {
+  res.json({
+    loggedIn: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      userType: req.user.userType,
+      name: req.user.name
+    },
+    redirectUrl: req.user.userType === 1 
+      ? "/Admin/AdminHome" 
+      : req.user.userType === 2 
+      ? "/ExternalResources/ExternalResourcesHome" 
+      : "/"
   });
 });
 
@@ -904,7 +968,35 @@ app.post("/logout", (req, res) => {
   });
 });
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: "Endpoint not found",
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ 
+      error: "CORS policy violation",
+      message: "Origin not allowed" 
+    });
+  }
+  
+  res.status(err.status || 500).json({ 
+    error: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔐 CORS enabled for: ${allowedOrigins.join(', ')}`);
 });
