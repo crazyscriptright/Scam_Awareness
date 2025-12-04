@@ -5,11 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "prod": "cross-env NODE_ENV=production node index.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "echo \"No linter configured\" && exit 0",
+    "heroku-postbuild": "echo \"Build completed\""
   },
   "engines": {
-    "node": "18.x",
-    "npm": "9.x"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -26,6 +30,16 @@
     "pg": "^8.13.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
-  }
+    "nodemon": "^3.1.10",
+    "cross-env": "^7.0.3"
+  },
+  "keywords": [
+    "scam-awareness",
+    "jwt",
+    "authentication",
+    "express",
+    "postgresql"
+  ],
+  "author": "Scam Awareness Team",
+  "license": "MIT"
 }

@@ -50,11 +50,17 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
-    "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
+    "build": "react-scripts build",
+    "build:prod": "cross-env NODE_ENV=production GENERATE_SOURCEMAP=false react-scripts build",
+    "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "serve": "serve -s build",
-    "deploy:vercel": "vercel --prod"
+    "serve": "serve -s build -l 3000",
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
+    "clean": "rm -rf build node_modules package-lock.json",
+    "deploy:vercel": "npm run build:prod && vercel --prod",
+    "deploy:vercel:preview": "npm run build && vercel"
   },
   "eslintConfig": {
     "extends": [
